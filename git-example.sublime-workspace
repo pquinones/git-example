@@ -1,0 +1,391 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"fon",
+				"font-size"
+			],
+			[
+				"font",
+				"font-family"
+			],
+			[
+				"Puntos",
+				"PuntosBancolombia"
+			],
+			[
+				"iD",
+				"IDTIPODOC"
+			],
+			[
+				"SA",
+				"SaldoPuntosLoyalty"
+			],
+			[
+				"PUNTOS",
+				"PuntosLoyalty"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "/E/NEW_CY17/INICIATIVAS/LOYALTY/DDLTables.sql",
+			"settings":
+			{
+				"buffer_size": 4602,
+				"encoding": "UTF-8",
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"contents": "/*Queries*/\n\nSELECT table_name \nFROM all_tables \nWHERE owner='LOYALTY';\n\n##Errores \n\nSELECT DISTINCT ODI_ERR_MESS\nFROM E$_STAGINGPB;\n\nSELECT count(1)\nFROM E$_STAGINGPB;\n\nSELECT count(1)\nFROM E$_STAGINGPE\nUNION ALL\nSELECT count(1)\nFROM E$_STAGINGPB; \n\n\nSELECT count(1)\nFROM PUNTOSEXITO;\n\nSELECT count(1)\nFROM PUNTOSBANCOLOMBIA;\n\nSELECT count(1)\nFROM STAGINGPE;\n\nSELECT count(1)\nFROM STAGINGPB;\n\n\nSELECT NRODOCUMENTO, count(NRODOCUMENTO) as VECES\nFROM E$_STAGINGPB\nGROUP BY NRODOCUMENTO;\n\n\nSELECT NRODOCUMENTO, NOMBRES, APELLIDOS\nFROM E$_STAGINGPB\nWHERE NRODOCUMENTO=39004476;\n\nSELECT OrigenInfo, count(OrigenInfo) as VECES\nFROM PuntosLoyalty\nGROUP BY OrigenInfo;\n\n\nTRUNCATE TABLE PuntosLoyalty;\nTRUNCATE TABLE E$_STAGINGPB;\nTRUNCATE TABLE E$_STAGINGPE;\n\n",
+			"settings":
+			{
+				"buffer_size": 753,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "/C/Users/pquinone/Documents/R/Favorita.R",
+			"settings":
+			{
+				"buffer_size": 9072,
+				"encoding": "UTF-8",
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"contents": " \n \nlibrary(RODBC)\n# Connect via RODBC with configured DSN\ndb <- odbcConnect(\"teradata64\", uid = \"uid\", pwd = \"pwd\")\n \n \n# Read results\nquery <-\n \n\"SELECT    \n    A.ID_FECHA,\n    A.ID_UOP,\n    A.ID_ITEM,\n    A.CANTIDAD,\n    A.VALOR_DESCUENTO,\n    B.NOM_FECHA,\n    C.COD_ITEM_SIC,\n    C.NOM_CLASE_MERC,\n    C.COD_DEPTO,\n    D.FERIADO,\n    D.ID_FERIADO\nFROM SUPER.TLOG_V2 A\nINNER JOIN SUPER.DIM_FECHA B\nON A.ID_FECHA = B.ID_FECHA\nINNER JOIN  SUPER.DIM_ITEM C\nON A.ID_ITEM = C.ID_ITEM\nLEFT JOIN SUPER.FERIADOS D\nON D.FECHA= B.NOM_FECHA;\"\n \n#No existe la table TLOG_V2. Seria FAC_VENTA. Tampoco esta la tabla FERIADOS. Revisar para que se puedan generar los cruces.\n \n\n## connect to Teradata and extraxt data\nb.prueba <- sqlQuery(db, query )\n \nodbcClose(db)\n \n####\np.item <- function(base.g){\n \n  if (is.na( x <- as.Date(b.prueba$NOM_FECHA,  format = \"%Y-%m-%d\")[1]) == T ){\n   \n    base.g[,\"fecha\"] <- as.Date(base.g$NOM_FECHA,  format = \"%m/%d/%Y\")\n   \n  } else {\n    \n    base.g[,\"fecha\"] <- as.Date(base.g$NOM_FECHA,  format = \"%Y-%m-%d\")\n   \n  }\n\n  \n  base.g[,\"anio\"] <- as.numeric(format(base.g$fecha,'%Y'))\n  base.g[,\"mes\"] <- as.numeric(format(base.g$fecha,'%m'))\n  base.g[,\"dia.sem\"] <- weekdays(base.g$fecha, abbreviate = T)\n  base.g[,\"promo\"] <- ifelse(base.g$VALOR_DESCUENTO > 0, 1, 0)\n  base.g[is.na(base.g$promo), \"promo\"] <- 0\n        \n  #fecha.base <- as.Date(\"4/01/2017\",  format = \"%m/%d/%Y\")\n  fecha.base <- max(base.g$fecha)\n \n \n  # loop para cada item con modelo predicitivo\n  \n  #items <- as.character(unique(base.g$COD_ITEM_SIC))\n \n  res.par <- list()\n \n  item.list <- split(base.g, base.g$COD_ITEM_SIC)\n \n  item.list\n \n  #b.item <- item.list[[3]] \n   \n  f.items <- function(b.item){\n   \n    ch <- ifelse( (length(b.item[,1]) <= 20), \"si\", \"no\")\n   \n    print(paste(\"local: \", l, \", item: \", unique(b.item$ID_ITEM), \", < 20: \", ch  ))\n   \n    # binario de dias\n    dias <- unique(b.item$dia.sem)\n   \n    for (d in dias){\n     \n      b.item[, d ] <- ifelse(b.item$dia.sem == d, 1, 0)\n     \n    }\n   \n    # binario de meses\n    meses <- unique(b.item$mes)\n   \n    for (m in meses){\n     \n      b.item[, paste( \"mes.\", m, sep = \"\" ) ] <- ifelse(b.item$mes == m, 1, 0)\n     \n    }\n   \n    # binario de anios\n    anios <- unique(b.item$anio)\n   \n    for (a in anios){\n     \n      b.item[, paste( \"anio.\", a, sep = \"\" ) ] <- ifelse(b.item$anio == a, 1, 0)\n     \n    }\n   \n    #binario de feriados\n    feria <- as.character(unique(b.item$ID_FERIADO))\n    feria <- feria[-which(feria == \"0\")]\n   \n    for (f in feria){\n     \n      b.item[,  paste( \"fer.\", f, sep = \"\" ) ] <- ifelse(b.item$ID_FERIADO == f, 1, 0)\n     \n    }\n   \n    n.b <- names(b.item)\n   \n    an <- n.b[(grep(\"anio.\", names(b.item) ))]\n    me <- n.b[(grep(\"mes.\", names(b.item) ))]\n    fe <- n.b[(grep(\"fer.\", names(b.item) ))]\n   \n    tryCatch(  {\n      \n      for (h in fe){\n       \n        b.item[which(b.item[, h] > 0) + 1, paste( \"lag.1.\", h, sep = \"\" ) ] <- 1\n        b.item[ is.na( b.item[, paste( \"lag.1.\", h, sep = \"\" ) ]) , paste( \"lag.1.\", h, sep = \"\" )  ] <- 0\n       \n        b.item[which(b.item[, h] > 0) + 2, paste( \"lag.2.\", h, sep = \"\" ) ] <- 1\n        b.item[ is.na( b.item[, paste( \"lag.2.\", h, sep = \"\" ) ]) , paste( \"lag.2.\", h, sep = \"\" )  ] <- 0\n       \n        b.item[which(b.item[, h] > 0) + 3, paste( \"lag.3.\", h, sep = \"\" ) ] <- 1\n        b.item[ is.na( b.item[, paste( \"lag.3.\", h, sep = \"\" ) ]) , paste( \"lag.3.\", h, sep = \"\" )  ] <- 0\n       \n        \n        b.item[which(b.item[, h] > 0) - 1, paste( \"lead.1.\", h, sep = \"\" ) ] <- 1\n        b.item[ is.na( b.item[, paste( \"lead.1.\", h, sep = \"\" ) ]) , paste( \"lead.1.\", h, sep = \"\" )  ] <- 0\n       \n        b.item[which(b.item[, h] > 0) - 2, paste( \"lead.2.\", h, sep = \"\" ) ] <- 1\n        b.item[ is.na( b.item[, paste( \"lead.2.\", h, sep = \"\" ) ]) , paste( \"lead.2.\", h, sep = \"\" )  ] <- 0\n       \n        b.item[which(b.item[, h] > 0) - 3, paste( \"lead.3.\", h, sep = \"\" )] <- 1\n        b.item[ is.na( b.item[, paste( \"lead.3.\", h, sep = \"\" ) ]) , paste( \"lead.3.\", h, sep = \"\" )  ] <- 0\n       \n      }\n    }, error = function(e) {\n     \n    })\n   \n    n.b <- names(b.item)\n   \n    lag <- n.b[(grep(\"lag.\", names(b.item) ))]\n    lead <- n.b[(grep(\"lead.\", names(b.item) ))]\n   \n    # defino variables para modelos\n   \n    \n    v.mod.1 <- c(dias, me, an, fe, \"promo\", lag, lead)\n   \n    # defino periodo para el forecast\n    periodo <- 14\n   \n    #Lm con step\n    if (length(b.item[,1]) <= 20){\n     \n      #print(\"check\")\n     \n      fecha.n <- seq.Date(fecha.base, fecha.base + periodo  , by = 1)[-1]\n     \n      res.par <- data.frame( nom_fec = fecha.n,\n                                                  NOM_CLASE_MERC = rep(unique(b.item$NOM_CLASE_MERC)[1], length(fecha.n) ) ,\n                                                  COD_DEPTO = rep(unique(b.item$COD_DEPTO)[1], length(fecha.n) ),\n                                                  ID_UOP = rep(unique(b.item$ID_UOP)[1], length(fecha.n) ),\n                                                  ID_ITEM = rep(unique(b.item$COD_ITEM_SIC)[1], length(fecha.n) ),\n                                                  PRED = rep(mean(b.item$CANTIDAD), length(fecha.n) ) )\n      res.par\n     \n    } else {\n     \n      \n      lm.mod.1 <-  tryCatch( {\n       \n        lm(b.item$CANTIDAD ~  ., data = b.item[, v.mod.1 ])\n       \n      }, error = function(e) {\n       \n        lm.mod.1 <- lm(b.item$CANTIDAD ~  ., data = b.item[, v.mod.1 ])\n      }\n     \n      )\n    \n      \n      nombres <- attr(lm.mod.1$terms,\"term.labels\")\n      #print(nombres)\n     \n      #armo nueva data para pred\n      fecha.n <- seq.Date(fecha.base, fecha.base + periodo  , by = 1)[-1]\n      nueva <- data.frame( nom_fec = fecha.n )\n      nueva[,\"anio\"] <- as.numeric(format(nueva$nom_fec,'%Y'))\n      nueva[,\"mes\"] <- as.numeric(format(nueva$nom_fec,'%m'))\n      nueva[,\"dia.sem\"] <- weekdays(nueva$nom_fec, abbreviate = T)\n     \n      # binario de nombres\n     \n      for (y in nombres){\n       \n        nueva[, y] <- 0\n       \n      }\n     \n      \n      \n      # binario de dias\n      dias.n <- unique(nueva$dia.sem)\n     \n      for (d in dias.n){\n       \n        nueva[, d ] <- ifelse(nueva$dia.sem == d, 1, 0)\n       \n      }\n     \n      # binario de meses\n     \n      for (m in meses){\n       \n        nueva[, paste( \"mes.\", m, sep = \"\" ) ] <- 0\n        \n      }\n     \n      meses.n <- unique(nueva$mes)\n     \n      for (m in meses.n){\n       \n        nueva[, paste( \"mes.\", m, sep = \"\" ) ] <- ifelse(nueva$mes == m, 1, 0)\n       \n      }\n     \n      # binario de anios\n     \n      \n      for (a in anios){\n       \n        nueva[, paste( \"anio.\", a, sep = \"\" ) ] <- 0\n       \n      }\n     \n      anios.n <- unique(nueva$anio)\n     \n      for (a in anios.n){\n       \n        nueva[, paste( \"anio.\", a, sep = \"\" ) ] <- ifelse(nueva$anio == a, 1, 0)\n       \n      }\n     \n      # binario de feriados\n     \n      for (f in feria){\n       \n        nueva[,  paste( \"fer.\", f, sep = \"\" ) ] <- 0\n       \n      }\n     \n      \n      \n      # modelo predictivo\n      nueva.p <- data.frame(nueva[, nombres ])\n      names(nueva.p) <- nombres\n     \n      f.mod.1 <- round(predict(lm.mod.1, h = periodo, newdata = nueva.p),0)\n    \n      fecha.n <- seq.Date(fecha.base, fecha.base + periodo  , by = 1)[-1]\n     \n      res.par <- data.frame( nom_fec = fecha.n,\n                                                  NOM_CLASE_MERC = rep(unique(b.item$NOM_CLASE_MERC)[1], length(fecha.n) ) ,\n                                                  COD_DEPTO = rep(unique(b.item$COD_DEPTO)[1], length(fecha.n) ),\n                                                  ID_UOP = rep(unique(b.item$ID_UOP)[1], length(fecha.n) ),\n                                                  ID_ITEM = rep(unique(b.item$COD_ITEM_SIC)[1], length(fecha.n) ),\n                                                  PRED = rep(mean(b.item$CANTIDAD), length(fecha.n) ) )\n      res.par\n      }\n    }\n   \n  data_c <- lapply(item.list, f.items )\n \n  resultado <- data.frame(do.call(\"rbind\", data_c))\n  resultado\n \n}\n \n#funcion para locales - para paralelizar por local -\n####\n \n  locales <- unique(b.prueba$ID_UOP)\n \n  l.local <- list()\n \n  system.time(\n   \n    for (l in locales){\n     \n      print(l)\n      b.local <- b.prueba[b.prueba$ID_UOP == l, ]\n      l.local[[which(locales == l)]] <- p.item(b.local)\n     \n    }\n   \n  )\n \n  \n#data final con el forecast a 14 dias\n  resultado  <- data.frame(do.call(\"rbind\", l.local))\n \n \n \n# Guardar resultados en Teradata\n \n  # Connect via RODBC with configured DSN\n  db <- odbcConnect(\"teradata64\", uid = \"uid\", pwd = \"pwd\") \n  \ntabla.db <-\n  \n  \" CREATE TABLE SUPER.RESULTADO (\n    NOM_CLASE_MERC CHAR(40) UTF8,  \n    COD_DEPTO   DOUBLE PRECISION,\n    NOM_FEC      CHAR(20),\n    ID_UOP           NUMBER,\n    ID_ITEM     NUMBER,\n    PRED NUMBER\n    ); \"\n \nsqlQuery(db, tabla.db)\nodbcClose(db)\n",
+			"settings":
+			{
+				"buffer_size": 8862,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"contents": "library(RODBC)\nlibrary(forecast)\n# Connect via RODBC with configured DSN\ndb <- odbcConnect(\"teradata64\", uid = \"uid\", pwd = \"pwd\")\n \n \n# Read results\nquery <- \n \n\"SELECT     \n    A.ID_FECHA,\n    A.ID_UOP,\n    A.ID_ITEM,\n    A.CANTIDAD,\n    A.VALOR_DESCUENTO,\n    B.NOM_FECHA,\n    C.COD_ITEM_SIC,\n    C.NOM_CLASE_MERC,\n    C.COD_DEPTO,\n    D.FERIADO,\n    D.ID_FERIADO\nFROM SUPER.TLOG_V2 A\nINNER JOIN SUPER.DIM_FECHA B\nON A.ID_FECHA = B.ID_FECHA \nINNER JOIN  SUPER.DIM_ITEM C\nON A.ID_ITEM = C.ID_ITEM\nLEFT JOIN SUPER.FERIADOS D\nON D.FECHA= B.NOM_FECHA;\"\n \n \n## connect to Teradata and extraxt data\nb.prueba <- sqlQuery(db, query )\n \nodbcClose(db)\n \n####\n \n \n#### Funcion simple\nb.prueba <- b.prueba[, c(\"NOM_FECHA\", \"CANTIDAD\", \"COD_ITEM_SIC\")]\n  \n  f.items <- function(b.item){\n    \n    if (is.na( x <- as.Date(b.item$NOM_FECHA,  format = \"%Y-%m-%d\")[1]) == T ){\n      \n      b.item[,\"fecha\"] <- as.Date(b.item$NOM_FECHA,  format = \"%m/%d/%Y\")\n      \n    } else { \n      \n      b.item[,\"fecha\"] <- as.Date(b.item$NOM_FECHA,  format = \"%Y-%m-%d\")\n      \n    }\n    \n    \n    periodo <- 14\n    \n    fecha.base <- max(b.item$fecha)\n    #ch <- ifelse( (length(b.item[,1]) <= 20), \"si\", \"no\")\n    \n    #print(paste(\"local: \", l, \", item: \", unique(b.item$ID_ITEM), \", < 20: \", ch  ))\n    \n    # defino periodo para el forecast\n    \n    #Lm con step\n    if (length(b.item[,1]) <= 20){\n      \n      #print(\"check\")\n      \n      fecha.n <- seq.Date(fecha.base, fecha.base + periodo  , by = 1)[-1]\n      \n      res.par <- data.frame( nom_fec = fecha.n,\n                             PRED = round(rep(mean(b.item$CANTIDAD),2), length(fecha.n) ) )\n      \n      #res.par <- paste(res.par[,1], res.par[,2], res.par[,3], res.par[,4], res.par[,5], res.par[,6], sep = \";\")\n      \n      res.par\n      \n    } else {\n      \n      \n      lm.mod.1 <- forecast(auto.arima(b.item$CANTIDAD, trace = F), h = periodo)\n \n      fecha.n <- seq.Date(fecha.base, fecha.base + periodo  , by = 1)[-1]\n      \n      res.par <- data.frame( nom_fec = fecha.n,\n                              PRED = round(as.numeric( lm.mod.1$mean, 2) ) )\n      \n      #res.par <- paste(res.par[,1], res.par[,2], res.par[,3], res.par[,4], res.par[,5], res.par[,6], sep = \";\")\n      \n      res.par\n    } \n  }\n  \n  \n \n#funcion para locales - para paralelizar por local -####\n \n \n  item.list <- split(b.prueba, b.prueba$COD_ITEM_SIC)\n  system.time(data_c <- lapply(item.list, f.items ))\n \n#data final con el forecast a 14 dias \n \n  resultado <- data.frame(do.call(\"rbind\", data_c))\n  resultado\n \n \n \n# Guardar resultados en Teradata\n \n  # Connect via RODBC with configured DSN\n  db <- odbcConnect(\"teradata64\", uid = \"uid\", pwd = \"pwd\")  \n  \ntabla.db <- \n  \n  \" CREATE TABLE SUPER.RESULTADO (\n    NOM_CLASE_MERC CHAR(40) UTF8,   \n    COD_DEPTO   DOUBLE PRECISION,\n    NOM_FEC      CHAR(20),\n    ID_UOP           NUMBER,\n    ID_ITEM     NUMBER,\n    PRED NUMBER\n    ); \"\n  \nsqlQuery(db, tabla.db)\nodbcClose(db) \n",
+			"settings":
+			{
+				"buffer_size": 2948,
+				"line_ending": "Windows",
+				"name": "library(RODBC)"
+			}
+		}
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"console":
+	{
+		"height": 0.0,
+		"history":
+		[
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"file_history":
+	[
+		"/C/Users/pquinone/Documents/Git.Repos/git-example/css/maintest.css",
+		"/C/Users/pquinone/Documents/Git.Repos/git-example/css/main.css"
+	],
+	"find":
+	{
+		"height": 34.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"p.item",
+			"base.g",
+			"item.list",
+			"p.item",
+			"p.itme",
+			"valor_descuento",
+			"cant_desc",
+			"p.item",
+			"f.items",
+			"uop",
+			"p.item",
+			"f.item",
+			"VARCHAR",
+			"VARCHAR2"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+			"VARCHAR2(50)"
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 4,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "/E/NEW_CY17/INICIATIVAS/LOYALTY/DDLTables.sql",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 4602,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								4601,
+								4601
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/SQL/SQL.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 2185.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 4,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 753,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								326,
+								251
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/SQL/SQL.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "/C/Users/pquinone/Documents/R/Favorita.R",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 9072,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1911,
+								1911
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/R/R.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 978.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 8862,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1444,
+								1444
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/R/R.sublime-syntax",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 765.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 3,
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 2948,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								2103,
+								2103
+							]
+						],
+						"settings":
+						{
+							"auto_name": "library(RODBC)",
+							"syntax": "Packages/R/R.sublime-syntax",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 23.0
+	},
+	"input":
+	{
+		"height": 0.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"pinned_build_system": "",
+	"project": "git-example.sublime-project",
+	"replace":
+	{
+		"height": 42.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 150.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}
